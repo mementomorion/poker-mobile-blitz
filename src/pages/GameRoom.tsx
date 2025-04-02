@@ -12,7 +12,7 @@ import {
   getRooms
 } from "@/services/api";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 
 const GameRoom: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -21,6 +21,7 @@ const GameRoom: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(true);
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
     // If user is not logged in, redirect to login
@@ -46,13 +47,14 @@ const GameRoom: React.FC = () => {
         if (roomInfo) {
           setRoom(roomInfo);
         } else {
+          setConnectionError("The room you're trying to join doesn't exist.");
           toast.error("Room Not Found", {
             description: "The room you're trying to join doesn't exist."
           });
-          navigate("/lobby");
         }
       } catch (error) {
         console.error("Error fetching room info:", error);
+        setConnectionError("Failed to fetch room information. Please try again.");
         toast.error("Error", {
           description: "Failed to fetch room information."
         });
@@ -66,6 +68,7 @@ const GameRoom: React.FC = () => {
     // Connect to the room when component mounts
     if (roomId) {
       setIsConnecting(true);
+      setConnectionError(null);
       connectToRoom(roomId);
     }
 
@@ -75,16 +78,15 @@ const GameRoom: React.FC = () => {
       setIsConnecting(false);
       
       if (status) {
-        toast.success("Connected to Game", {
-          description: "You've successfully joined the poker table."
-        });
+        setConnectionError(null);
       } else {
-        // Toast notification is handled in the websocket.ts file
+        // Connection error message is shown by the toast in websocket.ts
       }
     });
 
     // Set up error listener
     const removeErrorListener = addErrorListener(message => {
+      setConnectionError(message);
       toast.error("Game Error", {
         description: message
       });
@@ -101,6 +103,14 @@ const GameRoom: React.FC = () => {
   const handleLeaveRoom = () => {
     disconnectFromRoom();
     navigate("/lobby");
+  };
+
+  const handleRetryConnection = () => {
+    if (roomId) {
+      setIsConnecting(true);
+      setConnectionError(null);
+      connectToRoom(roomId);
+    }
   };
 
   if (loading) {
@@ -146,18 +156,33 @@ const GameRoom: React.FC = () => {
           <PokerTable maxPlayers={room?.maxPlayers || 6} />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
+            <div className="text-center max-w-md p-6 bg-black/50 rounded-lg border border-poker-accent/30">
               <div className="text-poker-gold text-xl mb-4">
                 {isConnecting ? "Connecting to game..." : "Connection failed"}
               </div>
               <div className="text-white/70 mb-6">
-                {isConnecting ? 
-                  "Please wait while we establish a connection..." : 
-                  "Unable to connect to the game server. Check your connection and try again."}
+                {isConnecting 
+                  ? "Please wait while we establish a connection..." 
+                  : connectionError || "Unable to connect to the game server. Check your connection and try again."}
               </div>
-              <Button onClick={handleLeaveRoom} variant="outline" className="border-poker-accent text-white">
-                Back to Lobby
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {!isConnecting && (
+                  <Button 
+                    onClick={handleRetryConnection} 
+                    variant="default" 
+                    className="bg-poker-accent hover:bg-poker-accent/80 text-white"
+                  >
+                    <RefreshCw size={16} className="mr-2" /> Try Again
+                  </Button>
+                )}
+                <Button 
+                  onClick={handleLeaveRoom} 
+                  variant="outline" 
+                  className="border-poker-accent text-white"
+                >
+                  Back to Lobby
+                </Button>
+              </div>
             </div>
           </div>
         )}

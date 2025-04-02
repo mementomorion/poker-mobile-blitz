@@ -14,7 +14,10 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 
 // Function to get WebSocket URL based on current environment
 const getWebSocketUrl = (roomId: string): string => {
-  return `ws://localhost:3000/game/${roomId}`;
+  // Use secure WebSockets when on HTTPS
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = import.meta.env.PROD ? window.location.host : 'localhost:3000';
+  return `${protocol}//${host}/game/${roomId}`;
 };
 
 export const connectToRoom = (roomId: string) => {
@@ -51,7 +54,7 @@ export const connectToRoom = (roomId: string) => {
 
     socket.onopen = () => {
       console.log("WebSocket connection established");
-      reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+      // Don't reset reconnect attempts here - we'll do it after successful join
       
       // Send join message
       if (socket && socket.readyState === WebSocket.OPEN) {
@@ -78,12 +81,21 @@ export const connectToRoom = (roomId: string) => {
         if (message.type === "game_state") {
           // Update game state listeners
           gameStateListeners.forEach(listener => listener(message.state));
+          
+          // Reset reconnect attempts on successful game state received
+          reconnectAttempts = 0;
         } else if (message.type === "error") {
           // Handle error messages
           console.error("Server error:", message.message);
           errorListeners.forEach(listener => listener(message.message));
           toast.error("Game Error", {
             description: message.message
+          });
+        } else if (message.type === "join_success") {
+          // Reset reconnect attempts only after successful join
+          reconnectAttempts = 0;
+          toast.success("Joined Game", {
+            description: "Successfully joined the poker table."
           });
         }
       } catch (error) {
@@ -108,8 +120,8 @@ export const connectToRoom = (roomId: string) => {
         
         // Try to reconnect after a delay
         reconnectTimeout = setTimeout(() => {
-          if (socket?.readyState === WebSocket.CLOSED) {
-            console.log(`Attempting to reconnect (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+          console.log(`Attempting to reconnect (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+          if (!socket || socket.readyState === WebSocket.CLOSED) {
             connectToRoom(roomId);
           }
         }, reconnectDelay);
@@ -122,11 +134,7 @@ export const connectToRoom = (roomId: string) => {
 
     socket.onerror = (error) => {
       console.error("WebSocket error:", error);
-      toast.error("Connection Error", {
-        description: "Error connecting to the game server. Will try to reconnect automatically."
-      });
-      
-      // Let onclose handle the reconnection
+      // No need to show a toast here as the onclose handler will be called next
     };
   } catch (error) {
     console.error("Error creating WebSocket connection:", error);

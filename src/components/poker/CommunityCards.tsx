@@ -25,7 +25,7 @@ const CommunityCards: React.FC<CommunityCardsProps> = ({ cards, phase }) => {
     <div className="flex space-x-1 mb-2">
       {cards.map((card, index) => (
         <PokerCard 
-          key={`${card.suit}-${card.value}`} 
+          key={`${card.suit}-${card.value}-${index}`} 
           card={card}
           dealAnimation={phase === "flop" && index < 3 || 
                         phase === "turn" && index === 3 ||

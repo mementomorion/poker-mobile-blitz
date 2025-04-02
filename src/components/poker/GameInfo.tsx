@@ -23,7 +23,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
       case "turn": return "Turn";
       case "river": return "River";
       case "showdown": return "Showdown";
-      default: return "";
+      default: return phase || "Unknown";
     }
   };
 
@@ -42,7 +42,7 @@ const GameInfo: React.FC<GameInfoProps> = ({
         <div className="w-1/3 h-2 bg-gray-700 rounded-full overflow-hidden">
           <div 
             className="h-full bg-poker-accent transition-all duration-1000 ease-linear" 
-            style={{ width: `${timeLeftPercentage}%` }}
+            style={{ width: `${Math.max(0, Math.min(timeLeftPercentage, 100))}%` }}
           />
         </div>
       )}
