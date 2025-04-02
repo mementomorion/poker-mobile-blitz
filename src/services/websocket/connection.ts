@@ -10,11 +10,14 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 
 // Function to get WebSocket URL based on current environment
 export const getWebSocketUrl = (roomId: string): string => {
-  // Use secure WebSockets when on HTTPS
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  // For development (when on a lovableproject.com domain), connect to the API server
+  if (window.location.hostname.includes('lovableproject.com')) {
+    return `ws://localhost:3000/game/${roomId}`;
+  }
   
-  // Always use localhost:3000 in development mode
-  const host = import.meta.env.DEV ? 'localhost:3000' : window.location.host;
+  // For normal cases, derive the WebSocket URL from the current protocol and host
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
   
   return `${protocol}//${host}/game/${roomId}`;
 };
