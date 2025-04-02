@@ -51,6 +51,7 @@ export const connectToRoom = (roomId: string) => {
   socket.onmessage = (event) => {
     try {
       const message = JSON.parse(event.data);
+      console.log('Message from server:', message);
       
       if (message.type === "game_state") {
         // Update game state listeners
