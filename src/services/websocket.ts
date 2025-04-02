@@ -9,14 +9,7 @@ let errorListeners: Array<(message: string) => void> = [];
 
 // Function to get WebSocket URL based on current environment
 const getWebSocketUrl = (roomId: string): string => {
-  // Determine if we're using HTTPS or HTTP
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  // If we're on localhost, use localhost:3000
-  if (window.location.hostname === 'localhost') {
-    return `ws://localhost:3000/game/${roomId}`;
-  }
-  // Otherwise use the same host as the current page
-  return `${protocol}//${window.location.host}/game/${roomId}`;
+  return `ws://localhost:3000/game/${roomId}`;
 };
 
 export const connectToRoom = (roomId: string) => {
