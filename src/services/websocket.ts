@@ -7,6 +7,8 @@ let socket: WebSocket | null = null;
 let gameStateListeners: Array<(state: GameState) => void> = [];
 let connectionStatusListeners: Array<(connected: boolean) => void> = [];
 let errorListeners: Array<(message: string) => void> = [];
+let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+let isIntentionalClose = false;
 
 // Function to get WebSocket URL based on current environment
 const getWebSocketUrl = (roomId: string): string => {
@@ -24,74 +26,121 @@ export const connectToRoom = (roomId: string) => {
     return;
   }
 
+  // Clear any reconnect timers
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+
   // Close existing connection if any
   if (socket && socket.readyState === WebSocket.OPEN) {
+    isIntentionalClose = true;
     socket.close();
   }
+
+  isIntentionalClose = false;
 
   // Connect to the WebSocket server with dynamically determined URL
   const wsUrl = getWebSocketUrl(roomId);
   console.log(`Connecting to WebSocket at: ${wsUrl}`);
-  socket = new WebSocket(wsUrl);
+  
+  try {
+    socket = new WebSocket(wsUrl);
 
-  socket.onopen = () => {
-    console.log("WebSocket connection established");
-    // Send join message
-    if (socket) {
-      socket.send(JSON.stringify({
-        type: "join",
-        playerId,
-        username,
-      }));
-    }
-    // Notify listeners about connection status
-    connectionStatusListeners.forEach(listener => listener(true));
-  };
-
-  socket.onmessage = (event) => {
-    try {
-      const message = JSON.parse(event.data);
-      console.log('Message from server:', message);
-      
-      if (message.type === "game_state") {
-        // Update game state listeners
-        gameStateListeners.forEach(listener => listener(message.state));
-      } else if (message.type === "error") {
-        // Handle error messages
-        console.error("Server error:", message.message);
-        errorListeners.forEach(listener => listener(message.message));
-        toast.error("Game Error", {
-          description: message.message
-        });
+    socket.onopen = () => {
+      console.log("WebSocket connection established");
+      // Send join message
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: "join",
+          playerId,
+          username,
+        }));
+        
+        // Notify listeners about connection status
+        connectionStatusListeners.forEach(listener => listener(true));
       }
-    } catch (error) {
-      console.error("Error parsing WebSocket message:", error);
-    }
-  };
+    };
 
-  socket.onclose = () => {
-    console.log("WebSocket connection closed");
-    // Notify listeners about connection status
-    connectionStatusListeners.forEach(listener => listener(false));
-  };
+    socket.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('Message from server:', message);
+        
+        if (message.type === "game_state") {
+          // Update game state listeners
+          gameStateListeners.forEach(listener => listener(message.state));
+        } else if (message.type === "error") {
+          // Handle error messages
+          console.error("Server error:", message.message);
+          errorListeners.forEach(listener => listener(message.message));
+          toast.error("Game Error", {
+            description: message.message
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    };
 
-  socket.onerror = (error) => {
-    console.error("WebSocket error:", error);
+    socket.onclose = (event) => {
+      console.log("WebSocket connection closed", event.code, event.reason);
+      
+      // Notify listeners about connection status
+      connectionStatusListeners.forEach(listener => listener(false));
+      
+      // Attempt to reconnect if the closure wasn't intentional
+      if (!isIntentionalClose) {
+        toast.error("Connection Lost", {
+          description: "Attempting to reconnect..."
+        });
+        
+        // Try to reconnect after a delay
+        reconnectTimeout = setTimeout(() => {
+          if (socket && socket.readyState === WebSocket.CLOSED) {
+            console.log("Attempting to reconnect...");
+            connectToRoom(roomId);
+          }
+        }, 3000); // Try to reconnect after 3 seconds
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      toast.error("Connection Error", {
+        description: "Failed to connect to the game server."
+      });
+    };
+  } catch (error) {
+    console.error("Error creating WebSocket connection:", error);
     toast.error("Connection Error", {
-      description: "Failed to connect to the game server."
+      description: "Failed to create WebSocket connection."
     });
-  };
+  }
 };
 
 export const disconnectFromRoom = () => {
   const playerId = localStorage.getItem("playerId");
   
+  // Clear any reconnect timers
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+  
   if (socket && socket.readyState === WebSocket.OPEN) {
+    isIntentionalClose = true;
+    
     // Send leave message
-    socket.send(JSON.stringify({
-      type: "leave",
-      playerId,
-    }));
+    try {
+      socket.send(JSON.stringify({
+        type: "leave",
+        playerId,
+      }));
+    } catch (error) {
+      console.error("Error sending leave message:", error);
+    }
+    
     socket.close();
   }
 };
@@ -106,12 +155,19 @@ export const sendPlayerAction = (action: string, amount?: number) => {
     return;
   }
 
-  socket.send(JSON.stringify({
-    type: "action",
-    action,
-    playerId,
-    ...(amount !== undefined && { amount }),
-  }));
+  try {
+    socket.send(JSON.stringify({
+      type: "action",
+      action,
+      playerId,
+      ...(amount !== undefined && { amount }),
+    }));
+  } catch (error) {
+    console.error("Error sending player action:", error);
+    toast.error("Action Error", {
+      description: "Failed to send your action to the server."
+    });
+  }
 };
 
 // Listeners for components
