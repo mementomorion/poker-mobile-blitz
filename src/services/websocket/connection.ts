@@ -12,7 +12,10 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 export const getWebSocketUrl = (roomId: string): string => {
   // Use secure WebSockets when on HTTPS
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = import.meta.env.PROD ? window.location.host : 'localhost:3000';
+  
+  // Always use localhost:3000 in development mode
+  const host = import.meta.env.DEV ? 'localhost:3000' : window.location.host;
+  
   return `${protocol}//${host}/game/${roomId}`;
 };
 
