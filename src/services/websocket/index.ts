@@ -18,7 +18,8 @@ import {
   addGameStateListener, 
   addConnectionStatusListener, 
   addErrorListener,
-  notifyConnectionStatusListeners
+  notifyConnectionStatusListeners,
+  notifyErrorListeners
 } from "./listeners";
 import { handleMessage, sendMessage, sendPlayerAction } from "./messages";
 
@@ -48,13 +49,14 @@ export const connectToRoom = (roomId: string) => {
 
   // Get WebSocket URL and create connection
   const wsUrl = getWebSocketUrl(roomId);
+  console.log(`Attempting to connect to WebSocket at: ${wsUrl}`);
   
   try {
     const socket = createWebSocketConnection(wsUrl);
     setSocket(socket);
 
     socket.onopen = () => {
-      console.log("WebSocket connection established");
+      console.log("WebSocket connection established successfully");
       
       // Send join message
       if (socket.readyState === WebSocket.OPEN) {
@@ -67,8 +69,12 @@ export const connectToRoom = (roomId: string) => {
           
           // Notify listeners about connection status
           notifyConnectionStatusListeners(true);
+          toast.success("Connected to Game Server", {
+            description: "You are now connected to the poker table."
+          });
         } catch (error) {
           console.error("Error sending join message:", error);
+          notifyErrorListeners("Failed to join the game room");
         }
       }
     };
@@ -76,7 +82,7 @@ export const connectToRoom = (roomId: string) => {
     socket.onmessage = handleMessage;
 
     socket.onclose = (event) => {
-      console.log("WebSocket connection closed", event.code, event.reason);
+      console.log(`WebSocket connection closed with code: ${event.code}, reason: ${event.reason || 'No reason provided'}`);
       
       // Notify listeners about connection status
       notifyConnectionStatusListeners(false);
@@ -95,10 +101,16 @@ export const connectToRoom = (roomId: string) => {
 
     socket.onerror = (error) => {
       console.error("WebSocket error:", error);
+      // Additional error information if available
+      if (error instanceof ErrorEvent) {
+        console.error("Error message:", error.message);
+      }
+      notifyErrorListeners("Error connecting to the game server");
       // No need to show a toast here as the onclose handler will be called next
     };
   } catch (error) {
     console.error("Error creating WebSocket connection:", error);
+    notifyErrorListeners("Failed to create WebSocket connection");
     toast.error("Connection Error", {
       description: "Failed to create WebSocket connection."
     });

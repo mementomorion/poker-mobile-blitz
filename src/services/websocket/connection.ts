@@ -1,4 +1,3 @@
-
 // WebSocket connection management
 import { toast } from "sonner";
 
@@ -10,12 +9,14 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 
 // Function to get WebSocket URL based on current environment
 export const getWebSocketUrl = (roomId: string): string => {
-  // For development (when on a lovableproject.com domain), connect to the API server
-  if (window.location.hostname.includes('lovableproject.com')) {
+  // For development (when running on localhost or in Lovable preview)
+  if (window.location.hostname.includes('lovableproject.com') || 
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1') {
     return `ws://localhost:3000/game/${roomId}`;
   }
   
-  // For normal cases, derive the WebSocket URL from the current protocol and host
+  // For production, derive the WebSocket URL from the current protocol and host
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
   
