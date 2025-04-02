@@ -3,8 +3,8 @@
 import { toast } from "@/components/ui/use-toast";
 import { Player, Room } from "./types";
 
-// Set API URL back to localhost
-const API_URL = "http://localhost:3000/api";
+// Set API URL back to localhost without the /api prefix
+const API_URL = "http://localhost:3000";
 
 export const loginUser = async (username: string): Promise<Player> => {
   try {
