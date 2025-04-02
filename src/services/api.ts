@@ -90,14 +90,16 @@ export const getRooms = async (): Promise<Room[]> => {
       throw new Error("Not logged in");
     }
 
+    // Updated to pass the playerId in the Authorization header as a Bearer token
     const response = await fetch(`${API_URL}/rooms`, {
       headers: {
-        Authorization: `Bearer ${playerId}`,
+        "Authorization": `Bearer ${playerId}`,
       },
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch rooms");
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch rooms");
     }
 
     return await response.json();
