@@ -3,7 +3,8 @@
 import { toast } from "@/components/ui/use-toast";
 import { Player, Room } from "./types";
 
-const API_URL = "http://localhost:3000";
+// Use a relative URL instead of hardcoded localhost
+const API_URL = "/api";
 
 export const loginUser = async (username: string): Promise<Player> => {
   try {
@@ -47,7 +48,7 @@ export const getRooms = async (): Promise<Room[]> => {
       throw new Error("Not logged in");
     }
 
-    // Send the playerId as a query parameter instead of an Authorization header
+    // Send the playerId as a query parameter 
     const response = await fetch(`${API_URL}/rooms?playerId=${playerId}`);
 
     if (!response.ok) {
