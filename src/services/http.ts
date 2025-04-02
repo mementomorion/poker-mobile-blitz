@@ -100,7 +100,17 @@ export const getRooms = async (): Promise<Room[]> => {
 
     // Try to parse room data
     try {
-      return await response.json();
+      const data = await response.json();
+      // Map the snake_case API response to camelCase properties expected by our Room interface
+      return data.map((room: any) => ({
+        id: room.id,
+        name: room.name,
+        playerCount: room.player_count,
+        maxPlayers: room.max_players,
+        smallBlind: room.small_blind,
+        bigBlind: room.big_blind,
+        status: room.status
+      }));
     } catch (parseError) {
       console.error("Failed to parse room data:", parseError);
       toast({
