@@ -12,7 +12,9 @@ import {
   getReconnectAttempts,
   incrementReconnectAttempts,
   resetReconnectAttempts,
-  scheduleReconnect
+  scheduleReconnect,
+  handleConnectionError,
+  checkServerHealth
 } from "./connection";
 import { 
   addGameStateListener, 
@@ -94,56 +96,26 @@ export const connectToRoom = (roomId: string) => {
       handleMessage(event);
     };
 
-    socket.onclose = (event) => {
-      console.log(`WebSocket connection closed with code: ${event.code}, reason: ${event.reason || 'No reason provided'}`);
-      
-      // Interpret close codes
-      let closeReason = "Unknown reason";
-      switch (event.code) {
-        case 1000:
-          closeReason = "Normal closure";
-          break;
-        case 1001:
-          closeReason = "Going away";
-          break;
-        case 1002:
-          closeReason = "Protocol error";
-          break;
-        case 1003:
-          closeReason = "Unsupported data";
-          break;
-        case 1005:
-          closeReason = "No status received";
-          break;
-        case 1006:
-          closeReason = "Abnormal closure";
-          break;
-        case 1007:
-          closeReason = "Invalid frame payload data";
-          break;
-        case 1008:
-          closeReason = "Policy violation";
-          break;
-        case 1009:
-          closeReason = "Message too big";
-          break;
-        case 1010:
-          closeReason = "Mandatory extension";
-          break;
-        case 1011:
-          closeReason = "Internal server error";
-          break;
-        case 1015:
-          closeReason = "TLS handshake";
-          break;
-      }
-      console.log(`Close reason: ${closeReason}`);
+    socket.onclose = async (event) => {
+      const errorMessage = handleConnectionError(event.code, event.reason);
       
       // Notify listeners about connection status
       notifyConnectionStatusListeners(false);
       
       // Attempt to reconnect if the closure wasn't intentional
       if (!getIsIntentionalClose()) {
+        // For code 1005 (No Status Received), check if server is available first
+        if (event.code === 1005) {
+          const isServerHealthy = await checkServerHealth();
+          
+          if (!isServerHealthy) {
+            toast.error("Server Unavailable", {
+              description: "The game server appears to be down. Please try again later."
+            });
+            return; // Don't attempt to reconnect if server is down
+          }
+        }
+        
         incrementReconnectAttempts();
         scheduleReconnect(roomId, () => {
           const currentSocket = getSocket();
@@ -169,19 +141,12 @@ export const connectToRoom = (roomId: string) => {
       }
       notifyErrorListeners("Error connecting to the game server");
       
-      // Check if server is available at all
-      fetch(window.location.origin + '/api/health')
-        .then(response => {
-          if (!response.ok) {
-            console.error("API server is not responding correctly");
-            toast.error("Server Error", {
-              description: "The game server is not responding correctly. Please try again later."
-            });
-          }
-        })
-        .catch(error => {
-          console.error("Failed to check API health:", error);
-        });
+      // We'll check server health here but won't toast, as onclose will be called next
+      checkServerHealth().then(isHealthy => {
+        if (!isHealthy) {
+          console.error("Server health check failed after WebSocket error");
+        }
+      });
     };
   } catch (error) {
     console.error("Error creating WebSocket connection:", error);
