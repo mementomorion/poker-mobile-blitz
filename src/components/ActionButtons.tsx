@@ -1,0 +1,127 @@
+
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
+
+interface ActionButtonsProps {
+  canCheck: boolean;
+  callAmount: number;
+  minBetAmount: number;
+  currentBalance: number;
+  onAction: (action: string, amount?: number) => void;
+}
+
+const ActionButtons: React.FC<ActionButtonsProps> = ({
+  canCheck,
+  callAmount,
+  minBetAmount,
+  currentBalance,
+  onAction,
+}) => {
+  const [showBetSlider, setShowBetSlider] = useState(false);
+  const [betAmount, setBetAmount] = useState(minBetAmount);
+  
+  const handleFold = () => {
+    onAction("fold");
+  };
+  
+  const handleCheck = () => {
+    onAction("check");
+  };
+  
+  const handleCall = () => {
+    onAction("call");
+  };
+  
+  const handleBet = () => {
+    if (showBetSlider) {
+      onAction("bet", betAmount);
+      setShowBetSlider(false);
+    } else {
+      setShowBetSlider(true);
+      setBetAmount(minBetAmount);
+    }
+  };
+  
+  const handleAllIn = () => {
+    onAction("all-in");
+  };
+  
+  const handleBetCancel = () => {
+    setShowBetSlider(false);
+  };
+  
+  return (
+    <div className="w-full">
+      {/* Bet slider */}
+      {showBetSlider ? (
+        <div className="mb-3 p-3 bg-black/80 rounded-lg">
+          <div className="flex justify-between mb-2 text-white text-sm">
+            <span>Bet Amount: ${betAmount}</span>
+            <span className="text-poker-gold">Balance: ${currentBalance}</span>
+          </div>
+          <div className="flex items-center space-x-2 mb-3">
+            <span className="text-white text-xs">${minBetAmount}</span>
+            <Slider
+              value={[betAmount]}
+              min={minBetAmount}
+              max={currentBalance}
+              step={minBetAmount}
+              onValueChange={(values) => setBetAmount(values[0])}
+              className="flex-1"
+            />
+            <span className="text-white text-xs">${currentBalance}</span>
+          </div>
+          <div className="flex space-x-2">
+            <Button onClick={handleBetCancel} variant="outline" className="flex-1 border-poker-accent text-poker-accent">
+              Cancel
+            </Button>
+            <Button onClick={handleBet} className="flex-1 bg-poker-gold text-poker-dark hover:bg-poker-gold/80">
+              Bet ${betAmount}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* Action buttons */
+        <div className="grid grid-cols-4 gap-2">
+          <Button 
+            onClick={handleFold} 
+            className="bg-poker-dark hover:bg-poker-dark/80 border border-poker-accent"
+          >
+            Fold
+          </Button>
+          
+          <Button 
+            onClick={canCheck ? handleCheck : handleCall} 
+            className={cn(
+              "text-white",
+              canCheck 
+                ? "bg-green-600 hover:bg-green-600/80" 
+                : "bg-blue-600 hover:bg-blue-600/80"
+            )}
+          >
+            {canCheck ? "Check" : `Call $${callAmount}`}
+          </Button>
+          
+          <Button 
+            onClick={handleBet} 
+            className="bg-poker-gold text-poker-dark hover:bg-poker-gold/80"
+            disabled={currentBalance < minBetAmount}
+          >
+            Bet
+          </Button>
+          
+          <Button 
+            onClick={handleAllIn} 
+            className="bg-poker-accent hover:bg-poker-accent/80"
+          >
+            All In
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ActionButtons;
