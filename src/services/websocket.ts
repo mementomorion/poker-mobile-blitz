@@ -8,11 +8,6 @@ let gameStateListeners: Array<(state: GameState) => void> = [];
 let connectionStatusListeners: Array<(connected: boolean) => void> = [];
 let errorListeners: Array<(message: string) => void> = [];
 
-// Determine the WebSocket protocol (wss for https, ws for http)
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-// Use relative path for WebSocket instead of hardcoded localhost
-const WS_BASE_URL = `${protocol}//${window.location.host}/api`;
-
 export const connectToRoom = (roomId: string) => {
   const playerId = localStorage.getItem("playerId");
   const username = localStorage.getItem("playerName");
@@ -31,8 +26,8 @@ export const connectToRoom = (roomId: string) => {
     socket.close();
   }
 
-  // Connect to the WebSocket server with the correct URL
-  socket = new WebSocket(`${WS_BASE_URL}/game/${roomId}`);
+  // Connect to the WebSocket server
+  socket = new WebSocket(`ws://localhost:3000/game/${roomId}`);
 
   socket.onopen = () => {
     console.log("WebSocket connection established");
