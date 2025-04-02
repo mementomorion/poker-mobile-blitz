@@ -1,4 +1,3 @@
-
 // WebSocket functionality for the poker application
 import { toast } from "@/components/ui/use-toast";
 import { GameState } from "./types";
@@ -7,6 +6,18 @@ let socket: WebSocket | null = null;
 let gameStateListeners: Array<(state: GameState) => void> = [];
 let connectionStatusListeners: Array<(connected: boolean) => void> = [];
 let errorListeners: Array<(message: string) => void> = [];
+
+// Function to get WebSocket URL based on current environment
+const getWebSocketUrl = (roomId: string): string => {
+  // Determine if we're using HTTPS or HTTP
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  // If we're on localhost, use localhost:3000
+  if (window.location.hostname === 'localhost') {
+    return `ws://localhost:3000/game/${roomId}`;
+  }
+  // Otherwise use the same host as the current page
+  return `${protocol}//${window.location.host}/game/${roomId}`;
+};
 
 export const connectToRoom = (roomId: string) => {
   const playerId = localStorage.getItem("playerId");
@@ -26,8 +37,10 @@ export const connectToRoom = (roomId: string) => {
     socket.close();
   }
 
-  // Connect to the WebSocket server
-  socket = new WebSocket(`ws://localhost:3000/game/${roomId}`);
+  // Connect to the WebSocket server with dynamically determined URL
+  const wsUrl = getWebSocketUrl(roomId);
+  console.log(`Connecting to WebSocket at: ${wsUrl}`);
+  socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
     console.log("WebSocket connection established");

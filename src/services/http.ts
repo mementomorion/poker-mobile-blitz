@@ -3,7 +3,8 @@
 import { toast } from "@/components/ui/use-toast";
 import { Player, Room } from "./types";
 
-const API_URL = "http://localhost:3000";
+// Use relative URL for API endpoints instead of hardcoded localhost
+const API_URL = "/api";
 
 export const loginUser = async (username: string): Promise<Player> => {
   try {
@@ -16,14 +17,22 @@ export const loginUser = async (username: string): Promise<Player> => {
     });
 
     if (!response.ok) {
-      throw new Error("Login failed");
+      const errorText = await response.text();
+      console.error("Login response:", errorText);
+      throw new Error(`Login failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
-    // Save the player ID to localStorage for future requests
-    localStorage.setItem("playerId", data.id);
-    localStorage.setItem("playerName", data.username);
-    return data;
+    // Try to parse response as JSON
+    try {
+      const data = await response.json();
+      // Save the player ID to localStorage for future requests
+      localStorage.setItem("playerId", data.id);
+      localStorage.setItem("playerName", data.username);
+      return data;
+    } catch (parseError) {
+      console.error("Failed to parse JSON response:", parseError);
+      throw new Error("Invalid response format from server");
+    }
   } catch (error) {
     console.error("Login error:", error);
     toast({
@@ -47,35 +56,60 @@ export const getRooms = async (): Promise<Room[]> => {
       throw new Error("Not logged in");
     }
 
-    // Send the playerId as a query parameter instead of an Authorization header
+    // Send the playerId as a query parameter
     const response = await fetch(`${API_URL}/rooms?playerId=${playerId}`);
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Room fetch error:", errorData);
-      
-      // Handle user authentication errors specifically
-      if (errorData.error === "User not found") {
-        toast({
-          title: "Authentication Failed",
-          description: "Your login session may have expired. Please log in again.",
-          variant: "destructive",
-        });
-        // Clear invalid credentials from localStorage
-        localStorage.removeItem("playerId");
-        localStorage.removeItem("playerName");
-      } else {
+      // Try to parse error response as JSON, but fall back to text if it fails
+      let errorMessage = "Failed to fetch rooms";
+      try {
+        const errorData = await response.json();
+        console.error("Room fetch error:", errorData);
+        errorMessage = errorData.error || errorMessage;
+        
+        // Handle user authentication errors specifically
+        if (errorData.error === "User not found") {
+          toast({
+            title: "Authentication Failed",
+            description: "Your login session may have expired. Please log in again.",
+            variant: "destructive",
+          });
+          // Clear invalid credentials from localStorage
+          localStorage.removeItem("playerId");
+          localStorage.removeItem("playerName");
+        } else {
+          toast({
+            title: "Failed to Load Rooms",
+            description: errorData.error || "Unable to fetch available rooms. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (parseError) {
+        // If we can't parse as JSON, get the response as text
+        const errorText = await response.text();
+        console.error("Failed to parse error response:", errorText);
         toast({
           title: "Failed to Load Rooms",
-          description: errorData.error || "Unable to fetch available rooms. Please try again.",
+          description: "Unable to fetch available rooms. Please try again.",
           variant: "destructive",
         });
       }
       
-      throw new Error(errorData.error || "Failed to fetch rooms");
+      throw new Error(errorMessage);
     }
 
-    return await response.json();
+    // Try to parse room data
+    try {
+      return await response.json();
+    } catch (parseError) {
+      console.error("Failed to parse room data:", parseError);
+      toast({
+        title: "Data Error",
+        description: "Invalid data format received from server.",
+        variant: "destructive",
+      });
+      throw new Error("Invalid response format from server");
+    }
   } catch (error) {
     console.error("Get rooms error:", error);
     throw error;
