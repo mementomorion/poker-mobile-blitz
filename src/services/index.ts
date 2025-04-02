@@ -1,5 +1,5 @@
 
-// Re-export everything from the other files for backward compatibility
+// Main export file for the poker application services
 export * from "./types";
 export * from "./http";
 export * from "./websocket";
