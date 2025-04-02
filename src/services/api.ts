@@ -87,10 +87,15 @@ export const getRooms = async (): Promise<Room[]> => {
   try {
     const playerId = localStorage.getItem("playerId");
     if (!playerId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to view available rooms.",
+        variant: "destructive",
+      });
       throw new Error("Not logged in");
     }
 
-    // Updated to pass the playerId in the Authorization header as a Bearer token
+    // Pass the playerId in the Authorization header as a Bearer token
     const response = await fetch(`${API_URL}/rooms`, {
       headers: {
         "Authorization": `Bearer ${playerId}`,
@@ -99,17 +104,32 @@ export const getRooms = async (): Promise<Room[]> => {
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error("Room fetch error:", errorData);
+      
+      // Handle user authentication errors specifically
+      if (errorData.error === "User not found") {
+        toast({
+          title: "Authentication Failed",
+          description: "Your login session may have expired. Please log in again.",
+          variant: "destructive",
+        });
+        // Clear invalid credentials from localStorage
+        localStorage.removeItem("playerId");
+        localStorage.removeItem("playerName");
+      } else {
+        toast({
+          title: "Failed to Load Rooms",
+          description: errorData.error || "Unable to fetch available rooms. Please try again.",
+          variant: "destructive",
+        });
+      }
+      
       throw new Error(errorData.error || "Failed to fetch rooms");
     }
 
     return await response.json();
   } catch (error) {
     console.error("Get rooms error:", error);
-    toast({
-      title: "Failed to Load Rooms",
-      description: "Unable to fetch available rooms. Please try again.",
-      variant: "destructive",
-    });
     throw error;
   }
 };
