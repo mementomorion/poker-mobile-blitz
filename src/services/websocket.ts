@@ -1,6 +1,5 @@
-
 // WebSocket functionality for the poker application
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { GameState } from "./types";
 
 let socket: WebSocket | null = null;
@@ -18,7 +17,11 @@ export const connectToRoom = (roomId: string) => {
   const username = localStorage.getItem("playerName");
   
   if (!playerId || !username) {
-    toast.error("You must be logged in to join a room.");
+    toast({
+      title: "Authentication Error",
+      description: "You must be logged in to join a room.",
+      variant: "destructive",
+    });
     return;
   }
 
@@ -49,7 +52,6 @@ export const connectToRoom = (roomId: string) => {
   socket.onmessage = (event) => {
     try {
       const message = JSON.parse(event.data);
-      console.log('Message from server:', message);
       
       if (message.type === "game_state") {
         // Update game state listeners
@@ -58,7 +60,11 @@ export const connectToRoom = (roomId: string) => {
         // Handle error messages
         console.error("Server error:", message.message);
         errorListeners.forEach(listener => listener(message.message));
-        toast.error(message.message);
+        toast({
+          title: "Game Error",
+          description: message.message,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error parsing WebSocket message:", error);
@@ -73,7 +79,11 @@ export const connectToRoom = (roomId: string) => {
 
   socket.onerror = (error) => {
     console.error("WebSocket error:", error);
-    toast.error("Failed to connect to the game server.");
+    toast({
+      title: "Connection Error",
+      description: "Failed to connect to the game server.",
+      variant: "destructive",
+    });
   };
 };
 
@@ -94,7 +104,11 @@ export const sendPlayerAction = (action: string, amount?: number) => {
   const playerId = localStorage.getItem("playerId");
   
   if (!socket || socket.readyState !== WebSocket.OPEN) {
-    toast.error("Not connected to the game server.");
+    toast({
+      title: "Connection Error",
+      description: "Not connected to the game server.",
+      variant: "destructive",
+    });
     return;
   }
 
