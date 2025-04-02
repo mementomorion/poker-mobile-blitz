@@ -6,27 +6,31 @@ import PokerTable from "@/components/PokerTable";
 import { 
   connectToRoom, 
   disconnectFromRoom, 
-  getCurrentUser, 
-  isLoggedIn,
   addConnectionStatusListener,
   addErrorListener,
   Room,
   getRooms
 } from "@/services/api";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
 const GameRoom: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
   const [room, setRoom] = useState<Room | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // If user is not logged in, redirect to login
-    if (!isLoggedIn()) {
+    const playerId = localStorage.getItem("playerId");
+    const playerName = localStorage.getItem("playerName");
+    
+    if (!playerId || !playerName) {
+      toast.error("Authentication Error", {
+        description: "You must be logged in to join a room."
+      });
       navigate("/login");
       return;
     }
@@ -42,15 +46,16 @@ const GameRoom: React.FC = () => {
         if (roomInfo) {
           setRoom(roomInfo);
         } else {
-          toast({
-            title: "Room Not Found",
-            description: "The room you're trying to join doesn't exist.",
-            variant: "destructive",
+          toast.error("Room Not Found", {
+            description: "The room you're trying to join doesn't exist."
           });
           navigate("/lobby");
         }
       } catch (error) {
         console.error("Error fetching room info:", error);
+        toast.error("Error", {
+          description: "Failed to fetch room information."
+        });
       } finally {
         setLoading(false);
       }
@@ -60,33 +65,28 @@ const GameRoom: React.FC = () => {
 
     // Connect to the room when component mounts
     if (roomId) {
+      setIsConnecting(true);
       connectToRoom(roomId);
     }
 
     // Set up connection status listener
     const removeConnectionListener = addConnectionStatusListener(status => {
       setIsConnected(status);
+      setIsConnecting(false);
       
       if (status) {
-        toast({
-          title: "Connected to Game",
-          description: "You've successfully joined the poker table.",
+        toast.success("Connected to Game", {
+          description: "You've successfully joined the poker table."
         });
       } else {
-        toast({
-          title: "Disconnected",
-          description: "You've been disconnected from the game.",
-          variant: "destructive",
-        });
+        // Toast notification is handled in the websocket.ts file
       }
     });
 
     // Set up error listener
     const removeErrorListener = addErrorListener(message => {
-      toast({
-        title: "Game Error",
-        description: message,
-        variant: "destructive",
+      toast.error("Game Error", {
+        description: message
       });
     });
 
@@ -96,7 +96,7 @@ const GameRoom: React.FC = () => {
       removeConnectionListener();
       removeErrorListener();
     };
-  }, [roomId, navigate, toast]);
+  }, [roomId, navigate]);
 
   const handleLeaveRoom = () => {
     disconnectFromRoom();
@@ -147,7 +147,14 @@ const GameRoom: React.FC = () => {
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <div className="text-poker-gold text-xl mb-4">Connecting to game...</div>
+              <div className="text-poker-gold text-xl mb-4">
+                {isConnecting ? "Connecting to game..." : "Connection failed"}
+              </div>
+              <div className="text-white/70 mb-6">
+                {isConnecting ? 
+                  "Please wait while we establish a connection..." : 
+                  "Unable to connect to the game server. Check your connection and try again."}
+              </div>
               <Button onClick={handleLeaveRoom} variant="outline" className="border-poker-accent text-white">
                 Back to Lobby
               </Button>

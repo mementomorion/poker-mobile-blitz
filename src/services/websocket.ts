@@ -9,6 +9,8 @@ let connectionStatusListeners: Array<(connected: boolean) => void> = [];
 let errorListeners: Array<(message: string) => void> = [];
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let isIntentionalClose = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 // Function to get WebSocket URL based on current environment
 const getWebSocketUrl = (roomId: string): string => {
@@ -49,16 +51,22 @@ export const connectToRoom = (roomId: string) => {
 
     socket.onopen = () => {
       console.log("WebSocket connection established");
+      reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+      
       // Send join message
       if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: "join",
-          playerId,
-          username,
-        }));
-        
-        // Notify listeners about connection status
-        connectionStatusListeners.forEach(listener => listener(true));
+        try {
+          socket.send(JSON.stringify({
+            type: "join",
+            playerId,
+            username,
+          }));
+          
+          // Notify listeners about connection status
+          connectionStatusListeners.forEach(listener => listener(true));
+        } catch (error) {
+          console.error("Error sending join message:", error);
+        }
       }
     };
 
@@ -90,26 +98,35 @@ export const connectToRoom = (roomId: string) => {
       connectionStatusListeners.forEach(listener => listener(false));
       
       // Attempt to reconnect if the closure wasn't intentional
-      if (!isIntentionalClose) {
+      if (!isIntentionalClose && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        const reconnectDelay = Math.min(3000 * reconnectAttempts, 15000); // Exponential backoff with max of 15 seconds
+        
         toast.error("Connection Lost", {
-          description: "Attempting to reconnect..."
+          description: `Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`
         });
         
         // Try to reconnect after a delay
         reconnectTimeout = setTimeout(() => {
-          if (socket && socket.readyState === WebSocket.CLOSED) {
-            console.log("Attempting to reconnect...");
+          if (socket?.readyState === WebSocket.CLOSED) {
+            console.log(`Attempting to reconnect (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
             connectToRoom(roomId);
           }
-        }, 3000); // Try to reconnect after 3 seconds
+        }, reconnectDelay);
+      } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS && !isIntentionalClose) {
+        toast.error("Connection Failed", {
+          description: "Maximum reconnection attempts reached. Please try again later."
+        });
       }
     };
 
     socket.onerror = (error) => {
       console.error("WebSocket error:", error);
       toast.error("Connection Error", {
-        description: "Failed to connect to the game server."
+        description: "Error connecting to the game server. Will try to reconnect automatically."
       });
+      
+      // Let onclose handle the reconnection
     };
   } catch (error) {
     console.error("Error creating WebSocket connection:", error);
@@ -127,6 +144,9 @@ export const disconnectFromRoom = () => {
     clearTimeout(reconnectTimeout);
     reconnectTimeout = null;
   }
+  
+  // Reset reconnect attempts
+  reconnectAttempts = 0;
   
   if (socket && socket.readyState === WebSocket.OPEN) {
     isIntentionalClose = true;
