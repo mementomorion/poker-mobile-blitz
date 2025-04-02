@@ -1,3 +1,4 @@
+
 // WebSocket connection management
 import { toast } from "sonner";
 
@@ -26,6 +27,13 @@ export const getWebSocketUrl = (roomId: string): string => {
 // Create and return a new WebSocket connection
 export const createWebSocketConnection = (url: string): WebSocket => {
   console.log(`Connecting to WebSocket at: ${url}`);
+  
+  // Force wss:// for secure connections
+  if (window.location.protocol === 'https:' && !url.startsWith('wss://')) {
+    url = url.replace('ws://', 'wss://');
+    console.log(`Updated to secure WebSocket URL: ${url}`);
+  }
+  
   return new WebSocket(url);
 };
 
@@ -74,7 +82,7 @@ export const scheduleReconnect = (roomId: string, callback: () => void): void =>
     }, reconnectDelay);
   } else {
     toast.error("Connection Failed", {
-      description: "Maximum reconnection attempts reached. Please try again later."
+      description: "Maximum reconnection attempts reached. Please try again later or check if the server is running."
     });
   }
 };
