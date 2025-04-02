@@ -1,5 +1,6 @@
+
 // WebSocket functionality for the poker application
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { GameState } from "./types";
 
 let socket: WebSocket | null = null;
@@ -17,10 +18,8 @@ export const connectToRoom = (roomId: string) => {
   const username = localStorage.getItem("playerName");
   
   if (!playerId || !username) {
-    toast({
-      title: "Authentication Error",
-      description: "You must be logged in to join a room.",
-      variant: "destructive",
+    toast.error("Authentication Error", {
+      description: "You must be logged in to join a room."
     });
     return;
   }
@@ -60,10 +59,8 @@ export const connectToRoom = (roomId: string) => {
         // Handle error messages
         console.error("Server error:", message.message);
         errorListeners.forEach(listener => listener(message.message));
-        toast({
-          title: "Game Error",
-          description: message.message,
-          variant: "destructive",
+        toast.error("Game Error", {
+          description: message.message
         });
       }
     } catch (error) {
@@ -79,10 +76,8 @@ export const connectToRoom = (roomId: string) => {
 
   socket.onerror = (error) => {
     console.error("WebSocket error:", error);
-    toast({
-      title: "Connection Error",
-      description: "Failed to connect to the game server.",
-      variant: "destructive",
+    toast.error("Connection Error", {
+      description: "Failed to connect to the game server."
     });
   };
 };
@@ -104,10 +99,8 @@ export const sendPlayerAction = (action: string, amount?: number) => {
   const playerId = localStorage.getItem("playerId");
   
   if (!socket || socket.readyState !== WebSocket.OPEN) {
-    toast({
-      title: "Connection Error",
-      description: "Not connected to the game server.",
-      variant: "destructive",
+    toast.error("Connection Error", {
+      description: "Not connected to the game server."
     });
     return;
   }
