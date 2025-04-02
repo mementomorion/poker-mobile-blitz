@@ -47,8 +47,7 @@ export const getRooms = async (): Promise<Room[]> => {
       throw new Error("Not logged in");
     }
 
-    // Send the playerId in the Authorization header
-    // The backend extracts it from req.user.playerId
+    // Pass the playerId in the Authorization header as a Bearer token
     const response = await fetch(`${API_URL}/rooms`, {
       headers: {
         "Authorization": `Bearer ${playerId}`,
