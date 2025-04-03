@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import {
   getRooms
 } from "@/services/api";
 import { toast } from "sonner";
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft, Chips, DollarSign, RefreshCw, Users } from "lucide-react";
 
 const GameRoom: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -24,7 +23,6 @@ const GameRoom: React.FC = () => {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   useEffect(() => {
-    // If user is not logged in, redirect to login
     const playerId = localStorage.getItem("playerId");
     const playerName = localStorage.getItem("playerName");
     
@@ -48,15 +46,15 @@ const GameRoom: React.FC = () => {
           setRoom(roomInfo);
         } else {
           setConnectionError("The room you're trying to join doesn't exist.");
-          toast.error("Room Not Found", {
-            description: "The room you're trying to join doesn't exist."
+          toast.error("Комната не найдена", {
+            description: "Комната, в которую вы пытаетесь войти, не существует."
           });
         }
       } catch (error) {
         console.error("Error fetching room info:", error);
         setConnectionError("Failed to fetch room information. Please try again.");
-        toast.error("Error", {
-          description: "Failed to fetch room information."
+        toast.error("Ошибка", {
+          description: "Не удалось получить информацию о комнате."
         });
       } finally {
         setLoading(false);
@@ -65,14 +63,12 @@ const GameRoom: React.FC = () => {
 
     getRoomInfo();
 
-    // Connect to the room when component mounts
     if (roomId) {
       setIsConnecting(true);
       setConnectionError(null);
       connectToRoom(roomId);
     }
 
-    // Set up connection status listener
     const removeConnectionListener = addConnectionStatusListener(status => {
       setIsConnected(status);
       setIsConnecting(false);
@@ -84,7 +80,6 @@ const GameRoom: React.FC = () => {
       }
     });
 
-    // Set up error listener
     const removeErrorListener = addErrorListener(message => {
       setConnectionError(message);
       toast.error("Game Error", {
@@ -92,7 +87,6 @@ const GameRoom: React.FC = () => {
       });
     });
 
-    // Disconnect from the room when component unmounts
     return () => {
       disconnectFromRoom();
       removeConnectionListener();
@@ -116,8 +110,13 @@ const GameRoom: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-poker-dark">
-        <div className="animate-pulse text-poker-gold text-2xl">
-          Loading game...
+        <div className="flex flex-col items-center">
+          <div className="animate-spin mb-4">
+            <Chips size={40} className="text-poker-gold" />
+          </div>
+          <div className="text-poker-gold text-2xl">
+            Загрузка игры...
+          </div>
         </div>
       </div>
     );
@@ -125,23 +124,31 @@ const GameRoom: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-poker-dark">
-      {/* Header */}
-      <header className="bg-black p-2 flex justify-between items-center">
+      <header className="bg-black p-2 flex justify-between items-center border-b border-poker-gold/20">
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={handleLeaveRoom} 
           className="text-white"
         >
-          <ArrowLeft size={16} className="mr-1" /> Leave
+          <ArrowLeft size={16} className="mr-1" /> Выйти
         </Button>
         
         <div className="text-center">
           <h1 className="text-lg font-bold text-poker-gold">
-            {room?.name || "Poker Table"}
+            {room?.name || "Покерный стол"}
           </h1>
-          <div className="text-xs text-white/60">
-            {room ? `Blinds: $${room.smallBlind}/$${room.bigBlind}` : ""}
+          <div className="text-xs text-white/60 flex justify-center items-center gap-2">
+            <span className="flex items-center">
+              <DollarSign size={12} className="mr-0.5" /> 
+              {room ? `${room.smallBlind}/${room.bigBlind}` : ""}
+            </span>
+            {room && (
+              <span className="flex items-center">
+                <Users size={12} className="mr-0.5" /> 
+                {`Макс. ${room.maxPlayers}`}
+              </span>
+            )}
           </div>
         </div>
         
@@ -150,37 +157,35 @@ const GameRoom: React.FC = () => {
         </div>
       </header>
 
-      {/* Main content - Poker table */}
-      <div className="flex-1 relative overflow-hidden">
-        {isConnected ? (
-          <PokerTable maxPlayers={room?.maxPlayers || 6} />
-        ) : (
+      <div className="flex-1 relative overflow-hidden bg-poker-dark">
+        <div className="absolute inset-0 bg-gradient-to-b from-poker-dark to-black/90"></div>
+        <div className="absolute w-full h-full bg-[url('/card-pattern.png')] opacity-5 mix-blend-overlay"></div>
+        
+        <PokerTable maxPlayers={room?.maxPlayers || 6} />
+
+        {!isConnected && !isConnecting && connectionError && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center max-w-md p-6 bg-black/50 rounded-lg border border-poker-accent/30">
+            <div className="text-center max-w-md p-6 bg-black/80 rounded-lg border border-poker-accent/30">
               <div className="text-poker-gold text-xl mb-4">
-                {isConnecting ? "Connecting to game..." : "Connection failed"}
+                Ошибка подключения
               </div>
               <div className="text-white/70 mb-6">
-                {isConnecting 
-                  ? "Please wait while we establish a connection..." 
-                  : connectionError || "Unable to connect to the game server. Check your connection and try again."}
+                {connectionError}
               </div>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {!isConnecting && (
-                  <Button 
-                    onClick={handleRetryConnection} 
-                    variant="default" 
-                    className="bg-poker-accent hover:bg-poker-accent/80 text-white"
-                  >
-                    <RefreshCw size={16} className="mr-2" /> Try Again
-                  </Button>
-                )}
+                <Button 
+                  onClick={handleRetryConnection} 
+                  variant="default" 
+                  className="bg-poker-accent hover:bg-poker-accent/80 text-white"
+                >
+                  <RefreshCw size={16} className="mr-2" /> Повторить
+                </Button>
                 <Button 
                   onClick={handleLeaveRoom} 
                   variant="outline" 
                   className="border-poker-accent text-white"
                 >
-                  Back to Lobby
+                  Вернуться в лобби
                 </Button>
               </div>
             </div>

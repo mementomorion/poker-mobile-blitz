@@ -3,7 +3,7 @@ import React from "react";
 import { Player } from "@/services/api";
 import PokerCard from "./PokerCard";
 import { cn } from "@/lib/utils";
-import { User, DollarSign } from "lucide-react";
+import { DollarSign, User } from "lucide-react";
 
 interface PlayerSpotProps {
   player: Player;
@@ -24,9 +24,19 @@ const PlayerSpot: React.FC<PlayerSpotProps> = ({
 }) => {
   // Determine the player status text
   const getStatusText = () => {
-    if (player.folded) return "Folded";
-    if (player.isAllIn) return "All In";
-    if (player.action) return player.action.charAt(0).toUpperCase() + player.action.slice(1);
+    if (player.folded) return "Фолд";
+    if (player.isAllIn) return "Олл-ин";
+    if (player.action) {
+      const actionMap: Record<string, string> = {
+        "check": "Чек",
+        "call": "Колл",
+        "bet": "Бет",
+        "fold": "Фолд",
+        "raise": "Рейз",
+        "all-in": "Олл-ин"
+      };
+      return actionMap[player.action] || player.action.charAt(0).toUpperCase() + player.action.slice(1);
+    }
     return "";
   };
 
@@ -39,7 +49,7 @@ const PlayerSpot: React.FC<PlayerSpotProps> = ({
     >
       {/* Bet amount */}
       {player.bet && player.bet > 0 && (
-        <div className="mb-1 text-poker-gold text-xs chip bg-poker-dark/60 px-2 py-1 rounded-full animate-chip-bet">
+        <div className="mb-1 text-poker-gold text-xs chip bg-poker-dark/80 px-2 py-1 rounded-full animate-chip-bet shadow-glow">
           ${player.bet}
         </div>
       )}
@@ -67,12 +77,12 @@ const PlayerSpot: React.FC<PlayerSpotProps> = ({
       {/* Player info */}
       <div 
         className={cn(
-          "flex flex-col items-center w-20 p-1 rounded-lg",
+          "flex flex-col items-center w-20 p-1 rounded-lg shadow-lg border",
           isLocalPlayer 
-            ? "bg-poker-accent text-white" 
+            ? "bg-poker-accent text-white border-poker-gold/50" 
             : isCurrentPlayer 
-            ? "bg-poker-gold text-poker-dark"
-            : "bg-black/40 text-white"
+            ? "bg-poker-gold text-poker-dark border-white/50 pulse-glow"
+            : "bg-black/60 text-white border-white/10"
         )}
       >
         {/* Username */}
@@ -88,7 +98,7 @@ const PlayerSpot: React.FC<PlayerSpotProps> = ({
 
         {/* Player status */}
         {getStatusText() && (
-          <div className="text-[10px] mt-1 uppercase font-bold">
+          <div className="text-[10px] mt-1 uppercase font-bold bg-black/30 px-2 py-0.5 rounded-full">
             {getStatusText()}
           </div>
         )}
@@ -97,17 +107,17 @@ const PlayerSpot: React.FC<PlayerSpotProps> = ({
       {/* Position indicators */}
       <div className="flex mt-1 space-x-1">
         {isDealer && (
-          <div className="text-[10px] bg-white text-poker-dark rounded-full px-2 py-0.5 animate-dealer-move">
+          <div className="text-[10px] bg-white text-poker-dark font-bold rounded-full px-2 py-0.5 shadow-glow animate-dealer-move">
             D
           </div>
         )}
         {isSmallBlind && (
-          <div className="text-[10px] bg-blue-500 text-white rounded-full px-2 py-0.5">
+          <div className="text-[10px] bg-blue-500 text-white font-bold rounded-full px-2 py-0.5 shadow-glow">
             SB
           </div>
         )}
         {isBigBlind && (
-          <div className="text-[10px] bg-purple-500 text-white rounded-full px-2 py-0.5">
+          <div className="text-[10px] bg-purple-500 text-white font-bold rounded-full px-2 py-0.5 shadow-glow">
             BB
           </div>
         )}
