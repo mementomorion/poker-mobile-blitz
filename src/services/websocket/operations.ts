@@ -1,5 +1,5 @@
 
-// Core WebSocket functionality for connecting and disconnecting
+// Core WebSocket operations for connecting and disconnecting
 import { toast } from "sonner";
 import {
   getWebSocketUrl,
@@ -9,18 +9,14 @@ import {
   setSocket,
   getIsIntentionalClose,
   setIsIntentionalClose,
-  getReconnectAttempts,
-  incrementReconnectAttempts,
   resetReconnectAttempts,
-  scheduleReconnect,
-  handleConnectionError,
-  checkServerHealth,
 } from "./connection";
 import {
   notifyConnectionStatusListeners,
   notifyErrorListeners,
 } from "./listeners";
 import { handleMessage, sendMessage } from "./messages";
+import { setupSocketEventHandlers } from "./eventHandlers";
 
 // Connect to a game room
 export const connectToRoom = (roomId: string) => {
@@ -63,89 +59,10 @@ export const connectToRoom = (roomId: string) => {
   try {
     const socket = createWebSocketConnection(wsUrl);
     setSocket(socket);
-
-    socket.onopen = () => {
-      console.log("WebSocket connection established successfully");
-
-      // Send join message
-      if (socket.readyState === WebSocket.OPEN) {
-        try {
-          const joinMessage = {
-            type: "join",
-            playerId,
-            username,
-          };
-          console.log("Sending join message:", joinMessage);
-          sendMessage(joinMessage);
-          
-          // Note: We'll wait for the server to confirm connection
-          // rather than setting connected status here
-        } catch (error) {
-          console.error("Error sending join message:", error);
-          notifyErrorListeners("Failed to join the game room");
-        }
-      }
-    };
-
-    socket.onmessage = (event) => {
-      console.log("Received message from server:", event.data);
-      handleMessage(event);
-    };
-
-    socket.onclose = async (event) => {
-      const errorMessage = handleConnectionError(event.code, event.reason);
-
-      // Notify listeners about connection status
-      notifyConnectionStatusListeners(false);
-
-      // Attempt to reconnect if the closure wasn't intentional
-      if (!getIsIntentionalClose()) {
-        // For code 1005 (No Status Received), check if server is available first
-        if (event.code === 1005) {
-          const isServerHealthy = await checkServerHealth();
-
-          if (!isServerHealthy) {
-            toast.error("Server Unavailable", {
-              description: "The game server appears to be down. Please try again later.",
-            });
-            return; // Don't attempt to reconnect if server is down
-          }
-        }
-
-        incrementReconnectAttempts();
-        scheduleReconnect(roomId, () => {
-          const currentSocket = getSocket();
-          if (
-            !currentSocket ||
-            currentSocket.readyState === WebSocket.CLOSED ||
-            currentSocket.readyState === WebSocket.CLOSING
-          ) {
-            console.log("Socket is closed or closing, reconnecting...");
-            connectToRoom(roomId);
-          } else {
-            console.log(`Socket is in state: ${currentSocket.readyState}, not reconnecting`);
-          }
-        });
-      } else {
-        console.log("Intentional close, not reconnecting");
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      // Additional error information if available
-      if (error instanceof ErrorEvent) {
-        console.error("Error message:", error.message);
-      }
-      notifyErrorListeners("Error connecting to the game server");
-
-      // We'll check server health here but won't toast, as onclose will be called next
-      checkServerHealth().then((isHealthy) => {
-        if (!isHealthy) {
-          console.error("Server health check failed after WebSocket error");
-        }
-      });
-    };
+    
+    // Setup socket event handlers (onopen, onmessage, onclose, onerror)
+    setupSocketEventHandlers(socket, roomId, playerId, username);
+    
   } catch (error) {
     console.error("Error creating WebSocket connection:", error);
     notifyErrorListeners("Failed to create WebSocket connection");

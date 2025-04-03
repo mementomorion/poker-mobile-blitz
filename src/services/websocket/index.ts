@@ -1,9 +1,6 @@
 
 // Main WebSocket functionality for the poker application
-import { 
-  connectToRoom, 
-  disconnectFromRoom 
-} from "./core";
+import { connectToRoom, disconnectFromRoom } from "./operations";
 import { 
   addGameStateListener, 
   addConnectionStatusListener, 
