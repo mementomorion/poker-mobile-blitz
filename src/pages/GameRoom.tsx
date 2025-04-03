@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import {
   getRooms
 } from "@/services/api";
 import { toast } from "sonner";
-import { ArrowLeft, Chips, DollarSign, RefreshCw, Users } from "lucide-react";
+import { ArrowLeft, CircleDollarSign, DollarSign, RefreshCw, Users } from "lucide-react";
 
 const GameRoom: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -112,7 +113,7 @@ const GameRoom: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-poker-dark">
         <div className="flex flex-col items-center">
           <div className="animate-spin mb-4">
-            <Chips size={40} className="text-poker-gold" />
+            <CircleDollarSign size={40} className="text-poker-gold" />
           </div>
           <div className="text-poker-gold text-2xl">
             Загрузка игры...
