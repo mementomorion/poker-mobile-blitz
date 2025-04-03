@@ -1,3 +1,4 @@
+
 // WebSocket message handling
 import { toast } from "sonner";
 import { getSocket } from "./connection";
@@ -71,6 +72,9 @@ export const handleMessage = (event: MessageEvent): void => {
       
       // Notify listeners that we're connected
       notifyConnectionStatusListeners(true);
+      
+      // Отображаем сообщение об успешном подключении
+      logInfo("Messages", message.message || "Welcome to the game!");
       
       logSuccessWithToast(
         "Messages",
