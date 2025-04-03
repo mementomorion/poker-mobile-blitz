@@ -1,4 +1,3 @@
-
 // WebSocket connection management
 import { toast } from "sonner";
 import { logDebug, logInfo, logWarn, logError, logErrorWithToast } from "./logging";

@@ -1,4 +1,3 @@
-
 // WebSocket message handling
 import { toast } from "sonner";
 import { getSocket } from "./connection";
@@ -18,7 +17,7 @@ export const sendMessage = (message: any): void => {
     );
     return;
   }
-
+  
   try {
     logDebug("Messages", "Sending message to server:", message);
     socket.send(JSON.stringify(message));

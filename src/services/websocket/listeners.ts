@@ -1,4 +1,3 @@
-
 // WebSocket event listeners management
 import { GameState } from "../types";
 import { logDebug, logInfo } from "./logging";
