@@ -1,3 +1,4 @@
+
 // Core WebSocket functionality for connecting and disconnecting
 import { toast } from "sonner";
 import {
@@ -76,12 +77,9 @@ export const connectToRoom = (roomId: string) => {
           };
           console.log("Sending join message:", joinMessage);
           sendMessage(joinMessage);
-
-          // Notify listeners about connection status
-          notifyConnectionStatusListeners(true);
-          toast.success("Connected to Game Server", {
-            description: "You are now connected to the poker table.",
-          });
+          
+          // Note: We'll wait for the server to confirm connection
+          // rather than setting connected status here
         } catch (error) {
           console.error("Error sending join message:", error);
           notifyErrorListeners("Failed to join the game room");

@@ -2,7 +2,7 @@
 // WebSocket message handling
 import { toast } from "sonner";
 import { getSocket } from "./connection";
-import { notifyGameStateListeners, notifyErrorListeners } from "./listeners";
+import { notifyGameStateListeners, notifyErrorListeners, notifyConnectionStatusListeners } from "./listeners";
 import { resetReconnectAttempts } from "./connection";
 
 // Send a message to the WebSocket server
@@ -54,11 +54,15 @@ export const handleMessage = (event: MessageEvent): void => {
       toast.error("Game Error", {
         description: message.message
       });
-    } else if (message.type === "join_success") {
-      // Reset reconnect attempts only after successful join
+    } else if (message.type === "join_success" || message.type === "connected") {
+      // Reset reconnect attempts after successful join or connection
       resetReconnectAttempts();
-      toast.success("Joined Game", {
-        description: "Successfully joined the poker table."
+      
+      // Notify listeners that we're connected
+      notifyConnectionStatusListeners(true);
+      
+      toast.success(message.type === "connected" ? "Connected to Game" : "Joined Game", {
+        description: message.message || "Successfully connected to the game server."
       });
     }
   } catch (error) {
