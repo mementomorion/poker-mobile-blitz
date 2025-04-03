@@ -25,7 +25,10 @@ const GameTable: React.FC<GameTableProps> = ({
       <div className="absolute inset-0 bg-gradient-to-b from-poker-dark to-black/90"></div>
       <div className="absolute w-full h-full bg-[url('/card-pattern.png')] opacity-5 mix-blend-overlay"></div>
       
-      <PokerTable maxPlayers={maxPlayers} />
+      <PokerTable 
+        maxPlayers={maxPlayers} 
+        isConnecting={isConnecting && !isConnected} 
+      />
 
       {!isConnected && !isConnecting && connectionError && (
         <ConnectionStatus 

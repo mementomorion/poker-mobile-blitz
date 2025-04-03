@@ -9,9 +9,10 @@ import { CircleDashed } from "lucide-react";
 
 interface PokerTableProps {
   maxPlayers: number;
+  isConnecting: boolean;
 }
 
-const PokerTable: React.FC<PokerTableProps> = ({ maxPlayers = 6 }) => {
+const PokerTable: React.FC<PokerTableProps> = ({ maxPlayers = 6, isConnecting = false }) => {
   const {
     gameState,
     playerPositions,
@@ -25,9 +26,6 @@ const PokerTable: React.FC<PokerTableProps> = ({ maxPlayers = 6 }) => {
     timeLeftPercentage,
     handleAction
   } = usePokerTableState(maxPlayers);
-
-  // Отображаем стол даже при отсутствии gameState, но показываем сообщение о подключении
-  const isConnecting = !gameState;
 
   return (
     <div className="flex flex-col h-full relative">
