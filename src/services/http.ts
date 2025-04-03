@@ -56,8 +56,9 @@ export const getRooms = async (): Promise<Room[]> => {
       throw new Error("Not logged in");
     }
 
-    // Send the playerId as a query parameter
-    const response = await fetch(`${API_URL}/rooms?playerId=${playerId}`);
+    // Add cache-busting parameter to prevent browser caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`${API_URL}/rooms?playerId=${playerId}&_t=${timestamp}`);
 
     if (!response.ok) {
       // Try to parse error response as JSON, but fall back to text if it fails
@@ -101,6 +102,7 @@ export const getRooms = async (): Promise<Room[]> => {
     // Try to parse room data
     try {
       const data = await response.json();
+      console.log("Fetched rooms data:", data);
       // Map the snake_case API response to camelCase properties expected by our Room interface
       return data.map((room: any) => ({
         id: room.id,

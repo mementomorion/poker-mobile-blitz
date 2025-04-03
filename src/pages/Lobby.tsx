@@ -9,11 +9,12 @@ import {
   logoutUser 
 } from "@/services/api";
 import { LogOut, RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Lobby: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<{ username: string; id: string } | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     // If user is not logged in, redirect to login
@@ -32,7 +33,8 @@ const Lobby: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    setRefreshKey(prevKey => prevKey + 1);
+    // Invalidate and refetch rooms query
+    queryClient.invalidateQueries({ queryKey: ['rooms'] });
   };
 
   if (!user) {
@@ -86,7 +88,7 @@ const Lobby: React.FC = () => {
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-semibold">Available Tables</h3>
           </div>
-          <RoomList key={refreshKey} />
+          <RoomList />
         </div>
       </div>
     </div>

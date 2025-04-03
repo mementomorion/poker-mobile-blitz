@@ -5,34 +5,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Users, DollarSign, PlayCircle, PauseCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 const RoomList: React.FC = () => {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const roomData = await getRooms();
-        setRooms(roomData);
-      } catch (error) {
-        // Error is already handled in the getRooms function
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRooms();
-    
-    // Refresh rooms every 30 seconds
-    const interval = setInterval(fetchRooms, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Use React Query for better caching and automatic refetching
+  const { 
+    data: rooms = [], 
+    isLoading, 
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['rooms'],
+    queryFn: getRooms,
+    // Refetch data every 10 seconds to ensure fresh data
+    refetchInterval: 10000, 
+    // Also refetch when window regains focus
+    refetchOnWindowFocus: true,
+  });
 
   const handleJoinRoom = (roomId: string) => {
     navigate(`/room/${roomId}`);
   };
+
+  const handleRefreshRooms = () => {
+    refetch();
+  };
+
+  useEffect(() => {
+    // Initial fetch
+    refetch();
+    
+    // Set up an interval to refetch rooms
+    const interval = setInterval(() => {
+      refetch();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [refetch]);
 
   const getStatusIcon = (status: string) => {
     if (status === "playing") {
@@ -48,6 +59,17 @@ const RoomList: React.FC = () => {
     return (
       <div className="flex justify-center items-center h-40">
         <div className="animate-pulse text-poker-gold">Loading rooms...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-red-400">Error loading rooms. Please try again.</p>
+        <Button onClick={handleRefreshRooms} className="mt-2">
+          Retry
+        </Button>
       </div>
     );
   }
