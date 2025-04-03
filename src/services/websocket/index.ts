@@ -7,6 +7,14 @@ import {
   addErrorListener 
 } from "./listeners";
 import { sendPlayerAction } from "./messages";
+import {
+  LogLevel,
+  setLogLevel,
+  logDebug,
+  logInfo,
+  logWarn,
+  logError
+} from "./logging";
 
 // Export all public methods and types
 export {
@@ -15,5 +23,12 @@ export {
   sendPlayerAction,
   addGameStateListener,
   addConnectionStatusListener,
-  addErrorListener
+  addErrorListener,
+  // Logging exports
+  LogLevel,
+  setLogLevel,
+  logDebug,
+  logInfo,
+  logWarn,
+  logError
 };

@@ -1,6 +1,7 @@
 
 // WebSocket connection management
 import { toast } from "sonner";
+import { logDebug, logInfo, logWarn, logError, logErrorWithToast } from "./logging";
 
 let socket: WebSocket | null = null;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -26,24 +27,24 @@ export const getWebSocketUrl = (roomId: string): string => {
   const host = window.location.host;
   
   const url = `${protocol}//${host}/game/${roomId}`;
-  console.log(`Generated WebSocket URL: ${url} (isSecure: ${isSecure})`);
+  logInfo("Connection", `Generated WebSocket URL: ${url} (isSecure: ${isSecure})`);
   return url;
 };
 
 // Create and return a new WebSocket connection
 export const createWebSocketConnection = (url: string): WebSocket => {
-  console.log(`Creating WebSocket connection to: ${url}`);
+  logInfo("Connection", `Creating WebSocket connection to: ${url}`);
   
   try {
     // Create the WebSocket
     const ws = new WebSocket(url);
     
     // Log initial state
-    console.log(`WebSocket initial state: ${ws.readyState}`);
+    logDebug("Connection", `WebSocket initial state: ${ws.readyState}`);
     
     return ws;
   } catch (error) {
-    console.error("Error creating WebSocket:", error);
+    logError("Connection", "Error creating WebSocket:", error);
     throw error;
   }
 };
@@ -53,7 +54,7 @@ export const clearReconnectTimer = (): void => {
   if (reconnectTimeout) {
     clearTimeout(reconnectTimeout);
     reconnectTimeout = null;
-    console.log("Cleared reconnect timer");
+    logDebug("Connection", "Cleared reconnect timer");
   }
 };
 
@@ -64,14 +65,14 @@ export const getSocket = (): WebSocket | null => socket;
 export const setSocket = (newSocket: WebSocket | null): void => {
   const oldState = socket ? socket.readyState : 'null';
   const newState = newSocket ? newSocket.readyState : 'null';
-  console.log(`Updating socket: ${oldState} -> ${newState}`);
+  logDebug("Connection", `Updating socket: ${oldState} -> ${newState}`);
   socket = newSocket;
 };
 
 // Get/set intentional close flag
 export const getIsIntentionalClose = (): boolean => isIntentionalClose;
 export const setIsIntentionalClose = (value: boolean): void => {
-  console.log(`Setting intentional close: ${value}`);
+  logDebug("Connection", `Setting intentional close: ${value}`);
   isIntentionalClose = value;
 };
 
@@ -79,12 +80,12 @@ export const setIsIntentionalClose = (value: boolean): void => {
 export const getReconnectAttempts = (): number => reconnectAttempts;
 export const incrementReconnectAttempts = (): number => {
   reconnectAttempts++;
-  console.log(`Incremented reconnect attempts to: ${reconnectAttempts}`);
+  logInfo("Connection", `Incremented reconnect attempts to: ${reconnectAttempts}`);
   return reconnectAttempts;
 };
 export const resetReconnectAttempts = (): void => {
   reconnectAttempts = 0;
-  console.log("Reset reconnect attempts to 0");
+  logDebug("Connection", "Reset reconnect attempts to 0");
 };
 
 // Handle connection errors appropriately based on error code
@@ -132,7 +133,7 @@ export const handleConnectionError = (code: number, reason: string): string => {
       errorMessage = `Connection closed with code: ${code}`;
   }
   
-  console.error(`WebSocket closed: ${errorMessage} ${reason ? '- ' + reason : ''}`);
+  logWarn("Connection", `WebSocket closed: ${errorMessage} ${reason ? '- ' + reason : ''}`);
   return errorMessage;
 };
 
@@ -141,39 +142,43 @@ export const scheduleReconnect = (roomId: string, callback: () => void): void =>
   if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
     const reconnectDelay = Math.min(3000 * Math.pow(1.5, reconnectAttempts), 15000); // Exponential backoff with max of 15 seconds
     
-    toast.error("Connection Lost", {
-      description: `Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`
-    });
+    logErrorWithToast(
+      "Connection", 
+      "Connection Lost", 
+      `Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`
+    );
     
-    console.log(`Scheduling reconnect in ${reconnectDelay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+    logInfo("Connection", `Scheduling reconnect in ${reconnectDelay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
     
     // Try to reconnect after a delay
     reconnectTimeout = setTimeout(() => {
-      console.log(`Executing reconnect callback (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+      logInfo("Connection", `Executing reconnect callback (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
       callback();
     }, reconnectDelay);
   } else {
-    console.error("Maximum reconnection attempts reached");
-    toast.error("Connection Failed", {
-      description: "Maximum reconnection attempts reached. Please try again later or check if the server is running."
-    });
+    logError("Connection", "Maximum reconnection attempts reached");
+    logErrorWithToast(
+      "Connection",
+      "Connection Failed",
+      "Maximum reconnection attempts reached. Please try again later or check if the server is running."
+    );
   }
 };
 
 // Check server health using fetch API
 export const checkServerHealth = async (): Promise<boolean> => {
   try {
-    console.log("Checking server health...");
+    logInfo("Connection", "Checking server health...");
     const response = await fetch(window.location.origin + '/api/health', {
       method: 'GET',
       headers: { 'Cache-Control': 'no-cache' }
     });
     
     const isHealthy = response.ok;
-    console.log(`Server health check result: ${isHealthy ? 'healthy' : 'unhealthy'}`);
+    logInfo("Connection", `Server health check result: ${isHealthy ? 'healthy' : 'unhealthy'}`);
     return isHealthy;
   } catch (error) {
-    console.error("Server health check failed:", error);
+    logError("Connection", "Server health check failed:", error);
     return false;
   }
 };

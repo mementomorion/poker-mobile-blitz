@@ -17,6 +17,7 @@ import {
 } from "./listeners";
 import { handleMessage, sendMessage } from "./messages";
 import { setupSocketEventHandlers } from "./eventHandlers";
+import { logDebug, logInfo, logError, logErrorWithToast } from "./logging";
 
 // Connect to a game room
 export const connectToRoom = (roomId: string) => {
@@ -24,11 +25,15 @@ export const connectToRoom = (roomId: string) => {
   const username = localStorage.getItem("playerName");
 
   if (!playerId || !username) {
-    toast.error("Authentication Error", {
-      description: "You must be logged in to join a room.",
-    });
+    logErrorWithToast(
+      "Operations", 
+      "Authentication Error", 
+      "You must be logged in to join a room."
+    );
     return;
   }
+
+  logInfo("Operations", `Connecting to room: ${roomId} as player: ${playerId} (${username})`);
 
   // Clear any reconnect timers
   clearReconnectTimer();
@@ -37,7 +42,7 @@ export const connectToRoom = (roomId: string) => {
   const existingSocket = getSocket();
   if (existingSocket) {
     // Log the current state of the socket
-    console.log(`Existing socket state: ${existingSocket.readyState}`);
+    logDebug("Operations", `Existing socket state: ${existingSocket.readyState}`);
 
     if (
       existingSocket.readyState === WebSocket.OPEN ||
@@ -45,7 +50,7 @@ export const connectToRoom = (roomId: string) => {
     ) {
       setIsIntentionalClose(true);
       existingSocket.close();
-      console.log("Closed existing WebSocket connection");
+      logInfo("Operations", "Closed existing WebSocket connection");
     }
   }
 
@@ -54,7 +59,7 @@ export const connectToRoom = (roomId: string) => {
 
   // Get WebSocket URL and create connection
   const wsUrl = getWebSocketUrl(roomId);
-  console.log(`Attempting to connect to WebSocket at: ${wsUrl}`);
+  logInfo("Operations", `Attempting to connect to WebSocket at: ${wsUrl}`);
 
   try {
     const socket = createWebSocketConnection(wsUrl);
@@ -64,17 +69,20 @@ export const connectToRoom = (roomId: string) => {
     setupSocketEventHandlers(socket, roomId, playerId, username);
     
   } catch (error) {
-    console.error("Error creating WebSocket connection:", error);
+    logError("Operations", "Error creating WebSocket connection:", error);
     notifyErrorListeners("Failed to create WebSocket connection");
-    toast.error("Connection Error", {
-      description: "Failed to create WebSocket connection. Please check if the server is running.",
-    });
+    logErrorWithToast(
+      "Operations", 
+      "Connection Error", 
+      "Failed to create WebSocket connection. Please check if the server is running."
+    );
   }
 };
 
 // Disconnect from a game room
 export const disconnectFromRoom = () => {
   const playerId = localStorage.getItem("playerId");
+  logInfo("Operations", `Disconnecting player: ${playerId} from room`);
 
   // Clear any reconnect timers
   clearReconnectTimer();
@@ -85,7 +93,7 @@ export const disconnectFromRoom = () => {
   const socket = getSocket();
   if (socket) {
     // Log the current state of the socket
-    console.log(`Socket state before disconnect: ${socket.readyState}`);
+    logDebug("Operations", `Socket state before disconnect: ${socket.readyState}`);
 
     setIsIntentionalClose(true);
 
@@ -96,24 +104,24 @@ export const disconnectFromRoom = () => {
           type: "leave",
           playerId,
         };
-        console.log("Sending leave message:", leaveMessage);
+        logInfo("Operations", "Sending leave message:", leaveMessage);
         sendMessage(leaveMessage);
       } catch (error) {
-        console.error("Error sending leave message:", error);
+        logError("Operations", "Error sending leave message:", error);
       }
 
       // Close the socket
       socket.close();
-      console.log("WebSocket connection closed intentionally");
+      logInfo("Operations", "WebSocket connection closed intentionally");
     } else if (socket.readyState === WebSocket.CONNECTING) {
       // If the socket is still connecting, close it
       socket.close();
-      console.log("Closed connecting WebSocket");
+      logInfo("Operations", "Closed connecting WebSocket");
     }
 
     // Set socket to null to clean up
     setSocket(null);
   } else {
-    console.log("No active socket to disconnect");
+    logInfo("Operations", "No active socket to disconnect");
   }
 };
